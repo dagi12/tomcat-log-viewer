@@ -1,0 +1,73 @@
+*.iml
+.idea/workspace.xml
+.idea/libraries
+.idea/misc.xml
+.idea/dataSources
+.idea/dataSources.xml
+.idea/artifacts
+.idea/sonarlint
+.idea/shelf
+.idea/uiDesigner.xml
+.idea/modules.xml
+.idea/compiler.xml
+*.local.xml
+.gradle
+out
+build
+temp*.*
+**/application-dev.properties
+.DS_Store
+**/dist
+**/src/main/generated
+
+
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# testing
+/coverage
+
+# production
+/build
+
+# misc
+.DS_Store
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+/package-lock.json
+/.gradle/
+/build/
+/src/openapi/openapi.ts
+# Tego się nie wyklucza z gita, to jest właśnie po to, żeby niezależnie od wersji yarna instalowały nam się te same biblioteki i żeby nie czekać na każdym nowym środowisku aż znajdzie zależności
+#/yarn.lock
+/out/
+/devextreme.ts
