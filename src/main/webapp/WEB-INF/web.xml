@@ -7,10 +7,6 @@
 
     <display-name>Tomcat Log Viewer</display-name>
 
-    <description>
-        A web application for browsing, searching, and downloading Tomcat server logs.
-    </description>
-
     <!-- Optional configuration parameter for custom log directory -->
     <context-param>
         <param-name>log.directory</param-name>
@@ -57,17 +53,6 @@
         </auth-constraint>
     </security-constraint>
 
-    <!-- Deny uncovered HTTP methods -->
-    <security-constraint>
-        <web-resource-collection>
-            <web-resource-name>Restricted Methods</web-resource-name>
-            <url-pattern>/*</url-pattern>
-            <http-method-omission>GET</http-method-omission>
-            <http-method-omission>POST</http-method-omission>
-        </web-resource-collection>
-        <auth-constraint/>
-    </security-constraint>
-
     <login-config>
         <auth-method>BASIC</auth-method>
         <realm-name>Tomcat Log Viewer</realm-name>
@@ -94,13 +79,4 @@
         <mime-type>text/plain</mime-type>
     </mime-mapping>
 
-    <!-- Index.jsp Redirect Servlet -->
-    <servlet>
-        <servlet-name>IndexRedirectServlet</servlet-name>
-        <servlet-class>com.logviewer.IndexRedirectServlet</servlet-class>
-    </servlet>
-    <servlet-mapping>
-        <servlet-name>IndexRedirectServlet</servlet-name>
-        <url-pattern>/index.jsp</url-pattern>
-    </servlet-mapping>
 </web-app>

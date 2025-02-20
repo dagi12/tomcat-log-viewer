@@ -1,4 +1,4 @@
-<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" isErrorPage="true" %>
 <!DOCTYPE html>
 <html>
 <head>
@@ -11,7 +11,19 @@
 <div class="container error-container">
     <h1>Error</h1>
     <div class="error-message">
+        <%-- Display specific error message if available --%>
+        <% if (request.getAttribute("error") != null) { %>
         <p>${error}</p>
+        <% } else if (exception != null) { %>
+        <p>An error occurred: <%= exception.getMessage() %></p>
+        <pre class="error-stack">
+                    <% for (StackTraceElement element : exception.getStackTrace()) { %>
+                        <%= element.toString() %>
+                    <% } %>
+                </pre>
+        <% } else { %>
+        <p>An unexpected error occurred. Please check the server logs for more details.</p>
+        <% } %>
     </div>
     <div class="controls">
         <a href="${pageContext.request.contextPath}/logs" class="button">Back to Log List</a>

@@ -207,6 +207,20 @@ a:hover {
     padding: 20px;
     margin-bottom: 20px;
     color: #d8000c;
+    text-align: left;
+}
+
+.error-stack {
+    background-color: #f8f8f8;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+    margin-top: 15px;
+    font-family: monospace;
+    font-size: 12px;
+    white-space: pre-wrap;
+    overflow-x: auto;
+    color: #666;
 }
 
 /* Footer */

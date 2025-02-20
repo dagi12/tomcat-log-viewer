@@ -1,27 +1,20 @@
 package com.logviewer;
 
-import jakarta.servlet.ServletException;
+import java.io.*;
+import java.nio.file.*;
+import java.util.*;
+import jakarta.servlet.*;
+import jakarta.servlet.http.*;
 import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.file.Files;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
 
 @WebServlet("/logs")
 public class LogViewerServlet extends HttpServlet {
 
     private static final long serialVersionUID = 1L;
+    private static final Logger logger = LoggerFactory.getLogger(LogViewerServlet.class);
     private static final String DEFAULT_LOG_DIR = System.getProperty("catalina.base") + "/logs";
 
     @Override
@@ -53,6 +46,12 @@ public class LogViewerServlet extends HttpServlet {
         try {
             List<LogFile> logFiles = new ArrayList<>();
             File dir = new File(logDir);
+
+            logger.info("Scanning log directory: {}", logDir);
+            if (!dir.exists() || !dir.isDirectory()) {
+                logger.error("Log directory does not exist or is not a directory: {}", logDir);
+                throw new ServletException("Log directory not found: " + logDir);
+            }
 
             if (dir.exists() && dir.isDirectory()) {
                 File[] files = dir.listFiles((d, name) -> name.endsWith(".log") || name.endsWith(".txt"));
@@ -296,7 +295,7 @@ public class LogViewerServlet extends HttpServlet {
     private String formatFileSize(long size) {
         if (size < 1024) return size + " B";
         int z = (63 - Long.numberOfLeadingZeros(size)) / 10;
-        return String.format("%.1f %sB", (double) size / (1L << (z * 10)), " KMGTPE".charAt(z));
+        return String.format("%.1f %sB", (double)size / (1L << (z*10)), " KMGTPE".charAt(z));
     }
 
     // Model classes
@@ -306,37 +305,14 @@ public class LogViewerServlet extends HttpServlet {
         private String lastModified;
         private String path;
 
-        public String getName() {
-            return name;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
-
-        public String getSize() {
-            return size;
-        }
-
-        public void setSize(String size) {
-            this.size = size;
-        }
-
-        public String getLastModified() {
-            return lastModified;
-        }
-
-        public void setLastModified(String lastModified) {
-            this.lastModified = lastModified;
-        }
-
-        public String getPath() {
-            return path;
-        }
-
-        public void setPath(String path) {
-            this.path = path;
-        }
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
+        public String getSize() { return size; }
+        public void setSize(String size) { this.size = size; }
+        public String getLastModified() { return lastModified; }
+        public void setLastModified(String lastModified) { this.lastModified = lastModified; }
+        public String getPath() { return path; }
+        public void setPath(String path) { this.path = path; }
     }
 
     public static class SearchResult {
@@ -344,28 +320,11 @@ public class LogViewerServlet extends HttpServlet {
         private int lineNumber;
         private String line;
 
-        public String getFileName() {
-            return fileName;
-        }
-
-        public void setFileName(String fileName) {
-            this.fileName = fileName;
-        }
-
-        public int getLineNumber() {
-            return lineNumber;
-        }
-
-        public void setLineNumber(int lineNumber) {
-            this.lineNumber = lineNumber;
-        }
-
-        public String getLine() {
-            return line;
-        }
-
-        public void setLine(String line) {
-            this.line = line;
-        }
+        public String getFileName() { return fileName; }
+        public void setFileName(String fileName) { this.fileName = fileName; }
+        public int getLineNumber() { return lineNumber; }
+        public void setLineNumber(int lineNumber) { this.lineNumber = lineNumber; }
+        public String getLine() { return line; }
+        public void setLine(String line) { this.line = line; }
     }
 }
