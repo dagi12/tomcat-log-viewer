@@ -50,13 +50,22 @@
         <web-resource-collection>
             <web-resource-name>Log Viewer Application</web-resource-name>
             <url-pattern>/*</url-pattern>
-            <http-method>GET</http-method>
-            <http-method>POST</http-method>
         </web-resource-collection>
         <auth-constraint>
             <role-name>manager-gui</role-name>
             <role-name>admin</role-name>
         </auth-constraint>
+    </security-constraint>
+
+    <!-- Deny uncovered HTTP methods -->
+    <security-constraint>
+        <web-resource-collection>
+            <web-resource-name>Restricted Methods</web-resource-name>
+            <url-pattern>/*</url-pattern>
+            <http-method-omission>GET</http-method-omission>
+            <http-method-omission>POST</http-method-omission>
+        </web-resource-collection>
+        <auth-constraint/>
     </security-constraint>
 
     <login-config>
@@ -66,11 +75,9 @@
 
     <security-role>
         <role-name>manager-gui</role-name>
-        <description>Tomcat manager GUI role</description>
     </security-role>
     <security-role>
         <role-name>admin</role-name>
-        <description>Administrator role</description>
     </security-role>
 
     <!-- MIME Mappings -->
