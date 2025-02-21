@@ -7,12 +7,6 @@
 
     <display-name>Tomcat Log Viewer</display-name>
 
-    <!-- Optional configuration parameter for custom log directory -->
-    <context-param>
-        <param-name>log.directory</param-name>
-        <param-value></param-value>
-    </context-param>
-
     <!-- Session Configuration -->
     <session-config>
         <session-timeout>30</session-timeout>
@@ -24,7 +18,7 @@
 
     <!-- Welcome Files -->
     <welcome-file-list>
-        <welcome-file>index.jsp</welcome-file>
+        <welcome-file>logs</welcome-file>
     </welcome-file-list>
 
     <!-- Error Pages -->

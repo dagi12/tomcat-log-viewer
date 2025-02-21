@@ -1,4 +1,4 @@
-<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
 <!DOCTYPE html>
 <html>
@@ -6,58 +6,95 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>View Log - ${fileName}</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/styles.css">
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 </head>
-<body>
-<div class="container">
-    <h1>Log File: ${fileName}</h1>
-
-    <div class="controls">
-        <a href="${pageContext.request.contextPath}/logs" class="button">Back to Log List</a>
-        <a href="${pageContext.request.contextPath}/logs?action=download&file=${fileName}" class="button">Download</a>
-
-        <div class="search-bar">
-            <form action="${pageContext.request.contextPath}/logs" method="get">
-                <input type="hidden" name="action" value="search">
-                <input type="hidden" name="file" value="${fileName}">
-                <input type="text" name="term" placeholder="Search in this file..." required>
-                <button type="submit">Search</button>
-            </form>
+<body class="bg-light">
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="mb-0">
+            <i class="bi bi-file-text"></i>
+            ${fileName}
+        </h1>
+        <div class="btn-group">
+            <a href="${pageContext.request.contextPath}/logs" class="btn btn-outline-primary">
+                <i class="bi bi-arrow-left"></i> Back to Log List
+            </a>
+            <a href="${pageContext.request.contextPath}/logs?action=download&file=${fileName}"
+               class="btn btn-outline-success">
+                <i class="bi bi-download"></i> Download
+            </a>
         </div>
     </div>
 
-    <div class="file-info">
-        <p>File Size: ${fileSize}</p>
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> File Size: ${fileSize}
     </div>
 
-    <div class="pagination">
-        <c:if test="${currentPage > 1}">
-            <a href="${pageContext.request.contextPath}/logs?action=view&file=${fileName}&page=${currentPage - 1}" class="button">Previous</a>
-        </c:if>
-        <span>Page ${currentPage} of ${totalPages}</span>
-        <c:if test="${currentPage < totalPages}">
-            <a href="${pageContext.request.contextPath}/logs?action=view&file=${fileName}&page=${currentPage + 1}" class="button">Next</a>
-        </c:if>
+    <nav aria-label="Log navigation" class="mb-3">
+        <ul class="pagination justify-content-center">
+            <c:if test="${currentPage > 1}">
+                <li class="page-item">
+                    <a class="page-link"
+                       href="${pageContext.request.contextPath}/logs?action=view&file=${fileName}&page=${currentPage - 1}">
+                        <i class="bi bi-chevron-left"></i> Previous
+                    </a>
+                </li>
+            </c:if>
+            <li class="page-item disabled">
+                <span class="page-link">Page ${currentPage} of ${totalPages}</span>
+            </li>
+            <c:if test="${currentPage < totalPages}">
+                <li class="page-item">
+                    <a class="page-link"
+                       href="${pageContext.request.contextPath}/logs?action=view&file=${fileName}&page=${currentPage + 1}">
+                        Next <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+            </c:if>
+        </ul>
+    </nav>
+
+    <div class="card">
+        <div class="card-body p-0">
+                <pre class="mb-0" style="max-height: 70vh; overflow-y: auto;"><code><c:forEach items="${logContent}"
+                                                                                               var="line">${line}
+                </c:forEach></code></pre>
+        </div>
     </div>
 
-    <div class="log-content">
-            <pre><code><c:forEach items="${logContent}" var="line">${line}
-            </c:forEach></code></pre>
-    </div>
+    <nav aria-label="Log navigation" class="mt-3">
+        <ul class="pagination justify-content-center">
+            <c:if test="${currentPage > 1}">
+                <li class="page-item">
+                    <a class="page-link"
+                       href="${pageContext.request.contextPath}/logs?action=view&file=${fileName}&page=${currentPage - 1}">
+                        <i class="bi bi-chevron-left"></i> Previous
+                    </a>
+                </li>
+            </c:if>
+            <li class="page-item disabled">
+                <span class="page-link">Page ${currentPage} of ${totalPages}</span>
+            </li>
+            <c:if test="${currentPage < totalPages}">
+                <li class="page-item">
+                    <a class="page-link"
+                       href="${pageContext.request.contextPath}/logs?action=view&file=${fileName}&page=${currentPage + 1}">
+                        Next <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+            </c:if>
+        </ul>
+    </nav>
 
-    <div class="pagination">
-        <c:if test="${currentPage > 1}">
-            <a href="${pageContext.request.contextPath}/logs?action=view&file=${fileName}&page=${currentPage - 1}" class="button">Previous</a>
-        </c:if>
-        <span>Page ${currentPage} of ${totalPages}</span>
-        <c:if test="${currentPage < totalPages}">
-            <a href="${pageContext.request.contextPath}/logs?action=view&file=${fileName}&page=${currentPage + 1}" class="button">Next</a>
-        </c:if>
-    </div>
-
-    <div class="footer">
+    <footer class="text-center text-muted mt-4">
         <p>&copy; 2025 Tomcat Log Viewer</p>
-    </div>
+    </footer>
 </div>
+
+<!-- Bootstrap 5 JS Bundle -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
