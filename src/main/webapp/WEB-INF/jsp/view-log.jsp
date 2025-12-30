@@ -59,9 +59,9 @@
 
     <div class="card">
         <div class="card-body p-0">
-                <pre class="mb-0" style="max-height: 70vh; overflow-y: auto;"><code><c:forEach items="${logContent}"
-                                                                                               var="line">${line}
-                </c:forEach></code></pre>
+                <pre class="mb-0" style="max-height: 70vh; overflow-y: auto; white-space: pre-wrap;"><c:forEach
+                        items="${logContent}" var="line"><c:out value="${line}" escapeXml="false"/>
+                </c:forEach></pre>
         </div>
     </div>
 

@@ -29,8 +29,8 @@ import java.util.stream.Collectors;
 public class LogViewerServlet extends HttpServlet {
     private static final Logger log = LoggerFactory.getLogger(LogViewerServlet.class);
     private static final String DEFAULT_LOG_DIR = System.getProperty("catalina.base") + "/logs";
-    private static final int PAGE_SIZE = 1000;
-    private static final Predicate<String> LOG_FILE_FILTER = name -> name.endsWith(".log") || name.endsWith(".txt");
+    private static final int PAGE_SIZE = 2000;
+    private static final Predicate<String> LOG_FILE_FILTER = name -> name.endsWith(".log") || name.endsWith(".txt") || name.equals("catalina.out");
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -67,9 +67,15 @@ public class LogViewerServlet extends HttpServlet {
     private void viewLog(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String fileName = validateFileName(req.getParameter("file"));
         File file = new File(DEFAULT_LOG_DIR, fileName);
-        int pageNum = Math.max(1, getPageNumber(req));
-
         long totalLines = Files.lines(file.toPath()).count();
+
+        // Default to last page if no page specified
+        int pageNum = getPageNumber(req);
+        if (pageNum <= 0) {
+            pageNum = (int) Math.ceil((double) totalLines / PAGE_SIZE);
+            pageNum = Math.max(1, pageNum);  // Ensure at least page 1
+        }
+
         List<String> lines = readFileLines(file, pageNum);
 
         req.setAttribute("fileName", fileName);
