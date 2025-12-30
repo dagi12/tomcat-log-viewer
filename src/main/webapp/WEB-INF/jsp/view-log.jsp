@@ -1,5 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn" %>
 <!DOCTYPE html>
 <html>
 <head>
@@ -23,6 +24,11 @@
             padding: 1rem;
             background-color: #f8f9fa;
             border-radius: 0.25rem;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            white-space: -moz-pre-wrap;
+            white-space: -pre-wrap;
+            white-space: -o-pre-wrap;
         }
 
         .card {
@@ -98,8 +104,9 @@
 
     <div class="card">
         <div class="card-body p-0">
-                <pre class="log-content" style="max-height: 70vh; overflow-y: auto; white-space: pre-wrap;"><c:forEach
-                        items="${logContent}" var="line"><c:out value="${line}" escapeXml="false"/>
+                <pre class="log-content"
+                     style="max-height: 70vh; overflow-y: auto; white-space: pre-wrap; white-space: -moz-pre-wrap; white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;"><c:forEach
+                        items="${logContent}" var="line">${fn:replace(fn:replace(line, '<', '&lt;'), '>', '&gt;')}
                 </c:forEach></pre>
         </div>
     </div>
