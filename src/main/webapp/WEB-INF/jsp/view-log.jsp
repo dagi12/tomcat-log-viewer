@@ -98,6 +98,12 @@
                         Next <i class="bi bi-chevron-right"></i>
                     </a>
                 </li>
+                <li class="page-item">
+                    <a class="page-link"
+                       href="${pageContext.request.contextPath}/logs?action=view&file=${fileName}&page=${totalPages}">
+                        <i class="bi bi-skip-end"></i> Last
+                    </a>
+                </li>
             </c:if>
         </ul>
     </nav>
@@ -129,6 +135,12 @@
                     <a class="page-link"
                        href="${pageContext.request.contextPath}/logs?action=view&file=${fileName}&page=${currentPage + 1}">
                         Next <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link"
+                       href="${pageContext.request.contextPath}/logs?action=view&file=${fileName}&page=${totalPages}">
+                        <i class="bi bi-skip-end"></i> Last
                     </a>
                 </li>
             </c:if>
