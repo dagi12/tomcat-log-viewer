@@ -2,7 +2,7 @@
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn" %>
 <!DOCTYPE html>
-<html>
+<html data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -14,6 +14,17 @@
     <style>
         body {
             font-size: 0.9rem;
+            background-color: #0c1220;
+            color: #e5e7eb;
+            color-scheme: dark;
+        }
+
+        a {
+            color: #8ab4ff;
+        }
+
+        a:hover {
+            color: #adc6ff;
         }
 
         .log-content {
@@ -21,19 +32,19 @@
             font-size: 0.85rem;
             line-height: 1.3;
             margin: 0;
-            padding: 1rem;
-            background-color: #f8f9fa;
-            border-radius: 0.25rem;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            white-space: -moz-pre-wrap;
-            white-space: -pre-wrap;
-            white-space: -o-pre-wrap;
+            padding: 1rem 1.25rem;
+            background-color: #0f172a;
+            border-radius: 0.5rem;
+            border: 1px solid #1f2937;
+            white-space: pre;
+            overflow: auto;
+            max-height: 70vh;
         }
 
         .card {
-            border: 1px solid rgba(0, 0, 0, .125);
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, .075);
+            border: 1px solid #1f2937;
+            background-color: #0b1220;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, .35);
         }
 
         .alert {
@@ -53,11 +64,12 @@
         h1 {
             font-size: 1.5rem;
             font-weight: 600;
+            color: #f8fafc;
         }
     </style>
 </head>
-<body class="bg-light">
-<div class="container py-4">
+<body>
+<div class="container-fluid py-4 px-3 px-md-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="mb-0">
             <i class="bi bi-file-text"></i>
@@ -110,10 +122,8 @@
 
     <div class="card">
         <div class="card-body p-0">
-                <pre class="log-content"
-                     style="max-height: 70vh; overflow-y: auto; white-space: pre-wrap; white-space: -moz-pre-wrap; white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;"><c:forEach
-                        items="${logContent}" var="line">${fn:replace(fn:replace(line, '<', '&lt;'), '>', '&gt;')}
-                </c:forEach></pre>
+            <pre class="log-content"><c:forEach items="${logContent}" var="line">${fn:replace(fn:replace(line, '<', '&lt;'), '>', '&gt;')}
+</c:forEach></pre>
         </div>
     </div>
 
