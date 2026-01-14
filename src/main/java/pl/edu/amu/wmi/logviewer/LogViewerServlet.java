@@ -13,11 +13,19 @@ import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.UncheckedIOException;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CodingErrorAction;
+import java.nio.charset.MalformedInputException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -67,7 +75,7 @@ public class LogViewerServlet extends HttpServlet {
     private void viewLog(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String fileName = validateFileName(req.getParameter("file"));
         File file = new File(DEFAULT_LOG_DIR, fileName);
-        long totalLines = Files.lines(file.toPath()).count();
+        long totalLines = countLinesWithFallback(file);
 
         // Default to last page if no page specified
         int pageNum = getPageNumber(req);
@@ -76,7 +84,7 @@ public class LogViewerServlet extends HttpServlet {
             pageNum = Math.max(1, pageNum);  // Ensure at least page 1
         }
 
-        List<String> lines = readFileLines(file, pageNum);
+        List<String> lines = readFileLinesWithFallback(file, pageNum);
 
         req.setAttribute("fileName", fileName);
         req.setAttribute("logContent", lines);
@@ -116,12 +124,52 @@ public class LogViewerServlet extends HttpServlet {
         return fileName;
     }
 
-    private List<String> readFileLines(File file, int pageNum) throws IOException {
-        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-            reader.lines().limit((long) (pageNum - 1) * PAGE_SIZE).forEach(l -> {
-            });
-            return reader.lines().limit(PAGE_SIZE).collect(Collectors.toList());
+    private List<String> readFileLinesWithFallback(File file, int pageNum) throws IOException {
+        try {
+            return readPage(file, pageNum, StandardCharsets.UTF_8);
+        } catch (UncheckedIOException | MalformedInputException e) {
+            if (isDecodingIssue(e)) {
+                return readPage(file, pageNum, StandardCharsets.ISO_8859_1);
+            }
+            throw e;
         }
+    }
+
+    private List<String> readPage(File file, int pageNum, Charset charset) throws IOException {
+        int toSkip = Math.max(0, (pageNum - 1) * PAGE_SIZE);
+        List<String> result = new ArrayList<>(PAGE_SIZE);
+        try (BufferedReader reader = newTolerantReader(file.toPath(), charset)) {
+            for (int i = 0; i < toSkip; i++) {
+                if (reader.readLine() == null) {
+                    break;
+                }
+            }
+            for (int i = 0; i < PAGE_SIZE; i++) {
+                String line = reader.readLine();
+                if (line == null) break;
+                result.add(line);
+            }
+        }
+        return result;
+    }
+
+    private long countLinesWithFallback(File file) throws IOException {
+        try (BufferedReader reader = newTolerantReader(file.toPath(), StandardCharsets.UTF_8)) {
+            return reader.lines().count();
+        }
+    }
+
+    private BufferedReader newTolerantReader(Path path, java.nio.charset.Charset charset) throws IOException {
+        CharsetDecoder decoder = charset.newDecoder()
+                .onMalformedInput(CodingErrorAction.REPLACE)
+                .onUnmappableCharacter(CodingErrorAction.REPLACE);
+        return new BufferedReader(new InputStreamReader(Files.newInputStream(path), decoder));
+    }
+
+    private boolean isDecodingIssue(Throwable e) {
+        if (e instanceof MalformedInputException) return true;
+        Throwable cause = e.getCause();
+        return cause instanceof MalformedInputException;
     }
 
     private int getPageNumber(HttpServletRequest req) {

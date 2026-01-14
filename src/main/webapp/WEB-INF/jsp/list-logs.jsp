@@ -109,7 +109,7 @@
     </div>
 
     <footer class="text-center text-muted mt-4">
-        <p>&copy; 2025 Tomcat Log Viewer</p>
+        <p>&copy; 2026 Tomcat Log Viewer</p>
     </footer>
 </div>
 
