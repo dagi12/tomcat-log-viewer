@@ -16,6 +16,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.io.RandomAccessFile;
 import java.io.UncheckedIOException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
@@ -27,6 +29,7 @@ import java.nio.file.Path;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
@@ -36,14 +39,29 @@ import java.util.stream.Collectors;
 @WebServlet("/logs")
 public class LogViewerServlet extends HttpServlet {
     private static final Logger log = LoggerFactory.getLogger(LogViewerServlet.class);
-    private static final String DEFAULT_LOG_DIR = System.getProperty("catalina.base") + "/logs";
+    private static final String DEFAULT_TAIL_FILE = "catalina.out";
     private static final int PAGE_SIZE = 2000;
+    private static final int DEFAULT_TAIL_LINES = 200;
+    private static final int MAX_TAIL_LINES = 2000;
     private static final Predicate<String> LOG_FILE_FILTER = name -> name.endsWith(".log") || name.endsWith(".txt") || name.equals("catalina.out");
+
+    private String logDir() {
+        return System.getProperty("catalina.base") + "/logs";
+    }
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        String action = req.getParameter("action");
+        if ("tail".equals(action)) {
+            try {
+                tailLogJson(req, resp);
+            } catch (Exception e) {
+                log.error("Error processing tail request", e);
+                writeJsonError(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
+            }
+            return;
+        }
         try {
-            String action = req.getParameter("action");
             if ("view".equals(action)) viewLog(req, resp);
             else if ("download".equals(action)) downloadLog(req, resp);
             else listLogs(req, resp);
@@ -55,7 +73,7 @@ public class LogViewerServlet extends HttpServlet {
     }
 
     private void listLogs(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        String logDir = DEFAULT_LOG_DIR;
+        String logDir = logDir();
         File dir = new File(logDir);
 
         if (!dir.exists() || !dir.isDirectory()) {
@@ -74,7 +92,7 @@ public class LogViewerServlet extends HttpServlet {
 
     private void viewLog(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String fileName = validateFileName(req.getParameter("file"));
-        File file = new File(DEFAULT_LOG_DIR, fileName);
+        File file = new File(logDir(), fileName);
         long totalLines = countLinesWithFallback(file);
 
         // Default to last page if no page specified
@@ -96,7 +114,7 @@ public class LogViewerServlet extends HttpServlet {
 
     private void downloadLog(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String fileName = validateFileName(req.getParameter("file"));
-        File file = new File(DEFAULT_LOG_DIR, fileName);
+        File file = new File(logDir(), fileName);
 
         resp.setContentType("application/octet-stream");
         resp.setHeader("Content-Disposition", "attachment; filename=\"" + fileName + "\"");
@@ -107,13 +125,62 @@ public class LogViewerServlet extends HttpServlet {
         }
     }
 
+    /**
+     * REST JSON: last N lines of a log file (default {@code catalina.out}).
+     * {@code GET /logs?action=tail&lines=200&file=catalina.out}
+     */
+    private void tailLogJson(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        String requestedFile = req.getParameter("file");
+        if (requestedFile == null || requestedFile.isEmpty()) {
+            requestedFile = DEFAULT_TAIL_FILE;
+        }
+        String fileName = validateFileName(requestedFile);
+        File file = new File(logDir(), fileName);
+        int lines = getTailLineCount(req);
+        List<String> lastLines = readLastLines(file, lines);
+
+        resp.setStatus(HttpServletResponse.SC_OK);
+        resp.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        resp.setContentType("application/json;charset=UTF-8");
+        try (PrintWriter writer = resp.getWriter()) {
+            writer.write('{');
+            writer.write("\"file\":\"");
+            writer.write(escapeJson(fileName));
+            writer.write("\",\"returnedLines\":");
+            writer.write(Integer.toString(lastLines.size()));
+            writer.write(",\"fileSize\":");
+            writer.write(Long.toString(file.length()));
+            writer.write(",\"lines\":[");
+            for (int i = 0; i < lastLines.size(); i++) {
+                if (i > 0) {
+                    writer.write(',');
+                }
+                writer.write('"');
+                writer.write(escapeJson(lastLines.get(i)));
+                writer.write('"');
+            }
+            writer.write("]}");
+        }
+    }
+
+    private void writeJsonError(HttpServletResponse resp, int status, String message) throws IOException {
+        resp.setStatus(status);
+        resp.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        resp.setContentType("application/json;charset=UTF-8");
+        try (PrintWriter writer = resp.getWriter()) {
+            writer.write("{\"error\":\"");
+            writer.write(escapeJson(message == null ? "unknown error" : message));
+            writer.write("\"}");
+        }
+    }
+
     private String validateFileName(String fileName) throws ServletException, IOException {
         if (fileName == null || fileName.isEmpty()) {
             throw new ServletException("File name not provided");
         }
 
-        File requestedFile = new File(LogViewerServlet.DEFAULT_LOG_DIR, fileName);
-        if (!requestedFile.getCanonicalPath().startsWith(new File(LogViewerServlet.DEFAULT_LOG_DIR).getCanonicalPath())) {
+        File requestedFile = new File(logDir(), fileName);
+        if (!requestedFile.getCanonicalPath().startsWith(new File(logDir()).getCanonicalPath())) {
             throw new ServletException("Access denied: Invalid file path");
         }
 
@@ -153,6 +220,42 @@ public class LogViewerServlet extends HttpServlet {
         return result;
     }
 
+    private List<String> readLastLines(File file, int lineCount) throws IOException {
+        if (lineCount <= 0 || file.length() == 0) {
+            return Collections.emptyList();
+        }
+        List<String> lines = new ArrayList<>(lineCount);
+        try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
+            long pos = raf.length() - 1;
+            ByteArrayBuilder builder = new ByteArrayBuilder();
+            int found = 0;
+            while (pos >= 0 && found < lineCount) {
+                raf.seek(pos);
+                int b = raf.read();
+                if (b == '\n') {
+                    // Ignore the empty segment from a trailing newline at EOF only.
+                    if (builder.length() > 0 || found > 0) {
+                        lines.add(decodeLine(builder.toByteArray()));
+                        builder.reset();
+                        found++;
+                    }
+                } else if (b != '\r') {
+                    builder.prepend((byte) b);
+                }
+                pos--;
+            }
+            if (builder.length() > 0 && found < lineCount) {
+                lines.add(decodeLine(builder.toByteArray()));
+            }
+        }
+        Collections.reverse(lines);
+        return lines;
+    }
+
+    private String decodeLine(byte[] bytes) {
+        return new String(bytes, StandardCharsets.UTF_8);
+    }
+
     private long countLinesWithFallback(File file) throws IOException {
         try (BufferedReader reader = newTolerantReader(file.toPath(), StandardCharsets.UTF_8)) {
             return reader.lines().count();
@@ -180,6 +283,22 @@ public class LogViewerServlet extends HttpServlet {
         }
     }
 
+    private int getTailLineCount(HttpServletRequest req) {
+        String raw = req.getParameter("lines");
+        if (raw == null || raw.isEmpty()) {
+            return DEFAULT_TAIL_LINES;
+        }
+        try {
+            int value = Integer.parseInt(raw);
+            if (value < 1) {
+                return DEFAULT_TAIL_LINES;
+            }
+            return Math.min(value, MAX_TAIL_LINES);
+        } catch (NumberFormatException e) {
+            return DEFAULT_TAIL_LINES;
+        }
+    }
+
     private LogFile createLogFile(File file) {
         LogFile logFile = new LogFile();
         logFile.setName(file.getName());
@@ -193,6 +312,78 @@ public class LogViewerServlet extends HttpServlet {
         if (size < 1024) return size + " B";
         int z = (63 - Long.numberOfLeadingZeros(size)) / 10;
         return String.format("%.1f %sB", (double) size / (1L << (z * 10)), " KMGTPE".charAt(z));
+    }
+
+    static String escapeJson(String value) {
+        StringBuilder sb = new StringBuilder(value.length() + 16);
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            switch (c) {
+                case '"':
+                    sb.append("\\\"");
+                    break;
+                case '\\':
+                    sb.append("\\\\");
+                    break;
+                case '\b':
+                    sb.append("\\b");
+                    break;
+                case '\f':
+                    sb.append("\\f");
+                    break;
+                case '\n':
+                    sb.append("\\n");
+                    break;
+                case '\r':
+                    sb.append("\\r");
+                    break;
+                case '\t':
+                    sb.append("\\t");
+                    break;
+                default:
+                    if (c < 0x20) {
+                        sb.append(String.format("\\u%04x", (int) c));
+                    } else {
+                        sb.append(c);
+                    }
+            }
+        }
+        return sb.toString();
+    }
+
+    /** Growing buffer that supports prepending bytes while scanning a file backwards. */
+    private static final class ByteArrayBuilder {
+        private byte[] buf = new byte[256];
+        private int start = 256;
+        private int end = 256;
+
+        void prepend(byte b) {
+            if (start == 0) {
+                int len = length();
+                byte[] grown = new byte[Math.max(256, len * 2)];
+                int newStart = grown.length - len;
+                System.arraycopy(buf, start, grown, newStart, len);
+                buf = grown;
+                start = newStart;
+                end = grown.length;
+            }
+            buf[--start] = b;
+        }
+
+        int length() {
+            return end - start;
+        }
+
+        byte[] toByteArray() {
+            byte[] out = new byte[length()];
+            System.arraycopy(buf, start, out, 0, out.length);
+            return out;
+        }
+
+        void reset() {
+            start = buf.length;
+            end = buf.length;
+        }
     }
 
     @Data
