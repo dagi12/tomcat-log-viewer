@@ -39,6 +39,10 @@ class LogViewerServletTailTest {
                 new File(logsDir, "catalina.out"),
                 "Line 1\nLine 2\nLine 3\nLine 4\nLine 5\n",
                 "UTF-8");
+        FileUtils.writeStringToFile(
+                new File(logsDir, "catalina.2026-08-20.log"),
+                "rotated\n",
+                "UTF-8");
 
         servlet = new LogViewerServlet();
         request = Mockito.mock(HttpServletRequest.class);
@@ -73,6 +77,19 @@ class LogViewerServletTailTest {
         assertThat(json).contains("\"Line 4\"");
         assertThat(json).contains("\"Line 5\"");
         assertThat(json).doesNotContain("\"Line 1\"");
+    }
+
+    @Test
+    void listReturnsJsonFileNamesIncludingRotatedCatalina() throws Exception {
+        when(request.getParameter("action")).thenReturn("list");
+
+        servlet.doGet(request, response);
+
+        verify(response).setContentType("application/json;charset=UTF-8");
+        String json = responseOutput.toString(StandardCharsets.UTF_8);
+        assertThat(json).contains("\"files\":[");
+        assertThat(json).contains("\"name\":\"catalina.out\"");
+        assertThat(json).contains("\"name\":\"catalina.2026-08-20.log\"");
     }
 
     @Test

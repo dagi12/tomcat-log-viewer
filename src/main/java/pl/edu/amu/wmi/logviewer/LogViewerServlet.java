@@ -52,11 +52,15 @@ public class LogViewerServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String action = req.getParameter("action");
-        if ("tail".equals(action)) {
+        if ("tail".equals(action) || "list".equals(action)) {
             try {
-                tailLogJson(req, resp);
+                if ("list".equals(action)) {
+                    listLogsJson(resp);
+                } else {
+                    tailLogJson(req, resp);
+                }
             } catch (Exception e) {
-                log.error("Error processing tail request", e);
+                log.error("Error processing JSON request", e);
                 writeJsonError(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
             }
             return;
@@ -64,7 +68,7 @@ public class LogViewerServlet extends HttpServlet {
         try {
             if ("view".equals(action)) viewLog(req, resp);
             else if ("download".equals(action)) downloadLog(req, resp);
-            else listLogs(req, resp);
+            else listLogsHtml(req, resp);
         } catch (Exception e) {
             log.error("Error processing request", e);
             req.setAttribute("error", e.getMessage());
@@ -72,22 +76,54 @@ public class LogViewerServlet extends HttpServlet {
         }
     }
 
-    private void listLogs(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+    private void listLogsHtml(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String logDir = logDir();
-        File dir = new File(logDir);
-
-        if (!dir.exists() || !dir.isDirectory()) {
-            throw new ServletException("Log directory not found: " + logDir);
-        }
-
-        List<LogFile> logFiles = Arrays.stream(Objects.requireNonNull(dir.listFiles((d, name) -> LOG_FILE_FILTER.test(name))))
-                .map(this::createLogFile)
-                .sorted((a, b) -> b.getLastModified().compareTo(a.getLastModified()))
-                .collect(Collectors.toList());
-
+        List<LogFile> logFiles = loadLogFiles();
         req.setAttribute("logDir", logDir);
         req.setAttribute("logFiles", logFiles);
         req.getRequestDispatcher("/WEB-INF/jsp/list-logs.jsp").forward(req, resp);
+    }
+
+    /**
+     * REST JSON: list log files (newest first), including rotated catalina.*.log.
+     * {@code GET /logs?action=list}
+     */
+    private void listLogsJson(HttpServletResponse resp) throws ServletException, IOException {
+        List<LogFile> logFiles = loadLogFiles();
+        resp.setStatus(HttpServletResponse.SC_OK);
+        resp.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        resp.setContentType("application/json;charset=UTF-8");
+        try (PrintWriter writer = resp.getWriter()) {
+            writer.write("{\"logDir\":\"");
+            writer.write(escapeJson(logDir()));
+            writer.write("\",\"files\":[");
+            for (int i = 0; i < logFiles.size(); i++) {
+                if (i > 0) {
+                    writer.write(',');
+                }
+                LogFile f = logFiles.get(i);
+                writer.write("{\"name\":\"");
+                writer.write(escapeJson(f.getName()));
+                writer.write("\",\"size\":\"");
+                writer.write(escapeJson(f.getSize()));
+                writer.write("\",\"lastModified\":\"");
+                writer.write(escapeJson(f.getLastModified()));
+                writer.write("\"}");
+            }
+            writer.write("]}");
+        }
+    }
+
+    private List<LogFile> loadLogFiles() throws ServletException {
+        String logDir = logDir();
+        File dir = new File(logDir);
+        if (!dir.exists() || !dir.isDirectory()) {
+            throw new ServletException("Log directory not found: " + logDir);
+        }
+        return Arrays.stream(Objects.requireNonNull(dir.listFiles((d, name) -> LOG_FILE_FILTER.test(name))))
+                .map(this::createLogFile)
+                .sorted((a, b) -> b.getLastModified().compareTo(a.getLastModified()))
+                .collect(Collectors.toList());
     }
 
     private void viewLog(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
