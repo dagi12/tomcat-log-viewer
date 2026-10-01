@@ -145,4 +145,28 @@ class LogViewerServletIT {
         verify(response).setHeader("Content-Disposition", "attachment; filename=\"" + TEST_FILE + "\"");
     }
 
+    @Test
+    void testListIncludesNonLogFile() throws Exception {
+        File extra = new File(TEST_LOG_DIR, "extra.txt");
+        FileUtils.writeStringToFile(extra, "extra", StandardCharsets.UTF_8.name());
+        when(request.getParameter("action")).thenReturn(null);
+        when(response.getWriter()).thenReturn(new PrintWriter(new ByteArrayOutputStream()));
+        servlet.doGet(request, response);
+        if (extra.exists()) extra.delete();
+    }
+
+    @Test
+    void testViewCompressedLogBlocked() throws Exception {
+        File gz = new File(TEST_LOG_DIR, "catalina.out.gz");
+        FileUtils.writeByteArrayToFile(gz, new byte[]{31, -117, 8});
+        when(request.getParameter("action")).thenReturn("view");
+        when(request.getParameter("file")).thenReturn("catalina.out.gz");
+        try {
+            servlet.doGet(request, response);
+        } catch (Exception e) {
+            assertThat(e.getMessage()).contains("Compressed log files");
+        }
+        if (gz.exists()) gz.delete();
+    }
+
 }

@@ -33,8 +33,8 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.zip.GZIPInputStream;
 
 @WebServlet("/logs")
 public class LogViewerServlet extends HttpServlet {
@@ -43,7 +43,6 @@ public class LogViewerServlet extends HttpServlet {
     private static final int PAGE_SIZE = 2000;
     private static final int DEFAULT_TAIL_LINES = 200;
     private static final int MAX_TAIL_LINES = 2000;
-    private static final Predicate<String> LOG_FILE_FILTER = name -> name.endsWith(".log") || name.endsWith(".txt") || name.equals("catalina.out");
 
     private String logDir() {
         return System.getProperty("catalina.base") + "/logs";
@@ -120,7 +119,7 @@ public class LogViewerServlet extends HttpServlet {
         if (!dir.exists() || !dir.isDirectory()) {
             throw new ServletException("Log directory not found: " + logDir);
         }
-        return Arrays.stream(Objects.requireNonNull(dir.listFiles((d, name) -> LOG_FILE_FILTER.test(name))))
+        return Arrays.stream(Objects.requireNonNull(dir.listFiles(File::isFile)))
                 .map(this::createLogFile)
                 .sorted((a, b) -> b.getLastModified().compareTo(a.getLastModified()))
                 .collect(Collectors.toList());
@@ -128,12 +127,15 @@ public class LogViewerServlet extends HttpServlet {
 
     private void viewLog(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String fileName = validateFileName(req.getParameter("file"));
+        if (fileName.toLowerCase().endsWith(".gz")) {
+            throw new ServletException("Compressed log files cannot be viewed; download the gunzipped file instead.");
+        }
         File file = new File(logDir(), fileName);
         long totalLines = countLinesWithFallback(file);
 
         // Default to last page if no page specified
         int pageNum = getPageNumber(req);
-        if (pageNum <= 0) {
+        if (pageNum == 0) {
             pageNum = (int) Math.ceil((double) totalLines / PAGE_SIZE);
             pageNum = Math.max(1, pageNum);  // Ensure at least page 1
         }
@@ -152,12 +154,24 @@ public class LogViewerServlet extends HttpServlet {
         String fileName = validateFileName(req.getParameter("file"));
         File file = new File(logDir(), fileName);
 
+        boolean isGz = fileName.toLowerCase().endsWith(".gz");
+
         resp.setContentType("application/octet-stream");
-        resp.setHeader("Content-Disposition", "attachment; filename=\"" + fileName + "\"");
-        resp.setContentLength((int) file.length());
+        String downloadName = isGz ? fileName.substring(0, fileName.length() - 3) : fileName;
+        resp.setHeader("Content-Disposition", "attachment; filename=\"" + downloadName + "\"");
+
+        if (!isGz) {
+            resp.setContentLength((int) file.length());
+        }
 
         try (InputStream in = FileUtils.openInputStream(file)) {
-            IOUtils.copy(in, resp.getOutputStream());
+            if (isGz) {
+                try (GZIPInputStream gzIn = new GZIPInputStream(in)) {
+                    IOUtils.copy(gzIn, resp.getOutputStream());
+                }
+            } else {
+                IOUtils.copy(in, resp.getOutputStream());
+            }
         }
     }
 
@@ -312,8 +326,12 @@ public class LogViewerServlet extends HttpServlet {
     }
 
     private int getPageNumber(HttpServletRequest req) {
+        String raw = req.getParameter("page");
+        if (raw == null || raw.isEmpty()) {
+            return 0; // unspecified — will resolve to last page
+        }
         try {
-            return Integer.parseInt(req.getParameter("page"));
+            return Integer.parseInt(raw);
         } catch (NumberFormatException e) {
             return 1;
         }

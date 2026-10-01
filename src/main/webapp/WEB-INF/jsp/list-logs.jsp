@@ -1,5 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn" %>
 <!DOCTYPE html>
 <html data-bs-theme="dark">
 <head>
@@ -83,14 +84,24 @@
                         <td>${logFile.lastModified}</td>
                         <td>
                             <div class="btn-group btn-group-sm">
-                                <a href="${pageContext.request.contextPath}/logs?action=view&file=${logFile.name}"
-                                   class="btn btn-outline-primary">
-                                    <i class="bi bi-eye"></i> View
-                                </a>
-                                <a href="${pageContext.request.contextPath}/logs?action=download&file=${logFile.name}"
-                                   class="btn btn-outline-success">
-                                    <i class="bi bi-download"></i> Download
-                                </a>
+                                <c:choose>
+                                    <c:when test="${fn:endsWith(logFile.name, '.gz')}">
+                                        <a href="${pageContext.request.contextPath}/logs?action=download&file=${logFile.name}"
+                                           class="btn btn-outline-success">
+                                            <i class="bi bi-download"></i> Download
+                                        </a>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <a href="${pageContext.request.contextPath}/logs?action=view&file=${logFile.name}"
+                                           class="btn btn-outline-primary">
+                                            <i class="bi bi-eye"></i> View
+                                        </a>
+                                        <a href="${pageContext.request.contextPath}/logs?action=download&file=${logFile.name}"
+                                           class="btn btn-outline-success">
+                                            <i class="bi bi-download"></i> Download
+                                        </a>
+                                    </c:otherwise>
+                                </c:choose>
                             </div>
                         </td>
                     </tr>
